@@ -1,8 +1,15 @@
 import UIKit
 
 class ViewController: UIViewController {
+    
+    var gNumber: String?
+    
+    @IBOutlet weak var searchingLabel: UILabel!
+    @IBOutlet weak var passwordTextField: UITextField!
+    @IBOutlet weak var passwordLabel: UILabel!
     @IBOutlet weak var button: UIButton!
     
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     var isBlack: Bool = false {
         didSet {
             if isBlack {
@@ -17,13 +24,38 @@ class ViewController: UIViewController {
         isBlack.toggle()
     }
     
+    @IBAction func generateRandomPassword(_ sender: Any) {
+        searchingLabel.isHidden = false
+        activityIndicator.isHidden = false
+        passwordTextField.isSecureTextEntry = true
+        passwordLabel.text = "....."
+        passwordTextField.text = randomAlphaNumericString(length: 3)
+        guard let text = passwordTextField.text else { return }
+        activityIndicator.startAnimating()
+        
+        DispatchQueue.global().async { [weak self] in
+            self?.bruteForce(passwordToUnlock: text)
+        }
+    }
+    
+    func randomAlphaNumericString(length: Int) -> String {
+        let allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        let allowedCharsCount = UInt32(allowedChars.count)
+        var randomString = ""
+
+        for _ in 0 ..< length {
+            let randomNum = Int(arc4random_uniform(allowedCharsCount))
+            let randomIndex = allowedChars.index(allowedChars.startIndex, offsetBy: randomNum)
+            let newCharacter = allowedChars[randomIndex]
+            randomString += String(newCharacter)
+        }
+
+        return randomString
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        
-        self.bruteForce(passwordToUnlock: "1!gr")
-        
-        // Do any additional setup after loading the view.
     }
     
     func bruteForce(passwordToUnlock: String) {
@@ -31,15 +63,20 @@ class ViewController: UIViewController {
 
         var password: String = ""
 
-        // Will strangely ends at 0000 instead of ~~~
-        while password != passwordToUnlock { // Increase MAXIMUM_PASSWORD_SIZE value for more
+        while password != passwordToUnlock {
             password = generateBruteForce(password, fromArray: ALLOWED_CHARACTERS)
-//             Your stuff here
-            print(password)
-            // Your stuff here
+            DispatchQueue.main.async { [weak self] in
+                self?.searchingLabel.text = password
+            }
         }
         
-        print(password)
+        DispatchQueue.main.async {
+            self.searchingLabel.isHidden = true
+            self.activityIndicator.stopAnimating()
+            self.activityIndicator.isHidden = true
+            self.passwordLabel.text = password
+            self.passwordTextField.isSecureTextEntry = false
+        }
     }
 }
 
